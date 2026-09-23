@@ -1,0 +1,129 @@
+{
+ "arch": "p4_big",
+ "params": 757280,
+ "res": 224,
+ "hist": [
+  {
+   "epoch": 0,
+   "loss": 0.4616671296788898,
+   "oid_single": 0.8954,
+   "oid_tta": 0.8954,
+   "lib_single": 0.9451428571428572,
+   "lib_tta": 0.9451428571428572,
+   "sec": 4472
+  },
+  {
+   "epoch": 1,
+   "loss": 0.24322512742005906,
+   "oid_single": 0.928,
+   "oid_tta": 0.928,
+   "lib_single": 0.9628571428571429,
+   "lib_tta": 0.9628571428571429,
+   "sec": 4446
+  },
+  {
+   "epoch": 2,
+   "loss": 0.18989962352301026,
+   "oid_single": 0.9338,
+   "oid_tta": 0.9338,
+   "lib_single": 0.9654285714285714,
+   "lib_tta": 0.9654285714285714,
+   "sec": 4443
+  },
+  {
+   "epoch": 3,
+   "loss": 0.1592678183402395,
+   "oid_single": 0.946,
+   "oid_tta": 0.946,
+   "lib_single": 0.9717142857142858,
+   "lib_tta": 0.9717142857142858,
+   "sec": 4443
+  },
+  {
+   "epoch": 4,
+   "loss": 0.13499548003028053,
+   "oid_single": 0.9536,
+   "oid_tta": 0.9536,
+   "lib_single": 0.9731428571428572,
+   "lib_tta": 0.9731428571428572,
+   "sec": 4443
+  },
+  {
+   "epoch": 5,
+   "loss": 0.11889530976683241,
+   "oid_single": 0.951,
+   "oid_tta": 0.951,
+   "lib_single": 0.9751428571428571,
+   "lib_tta": 0.9751428571428571,
+   "sec": 4444
+  },
+  {
+   "epoch": "product_metrics",
+   "n_images": 13352,
+   "n_rotated": 693,
+   "curve": [
+    {
+     "thr": 0.0,
+     "flagged": 1027,
+     "exact": 675,
+     "precision": 0.6573,
+     "recall": 0.974
+    },
+    {
+     "thr": 0.5,
+     "flagged": 958,
+     "exact": 673,
+     "precision": 0.7025,
+     "recall": 0.9711
+    },
+    {
+     "thr": 0.6,
+     "flagged": 880,
+     "exact": 666,
+     "precision": 0.7568,
+     "recall": 0.961
+    },
+    {
+     "thr": 0.7,
+     "flagged": 815,
+     "exact": 660,
+     "precision": 0.8098,
+     "recall": 0.9524
+    },
+    {
+     "thr": 0.8,
+     "flagged": 752,
+     "exact": 652,
+     "precision": 0.867,
+     "recall": 0.9408
+    },
+    {
+     "thr": 0.9,
+     "flagged": 674,
+     "exact": 629,
+     "precision": 0.9332,
+     "recall": 0.9076
+    },
+    {
+     "thr": 0.95,
+     "flagged": 630,
+     "exact": 612,
+     "precision": 0.9714,
+     "recall": 0.8831
+    },
+    {
+     "thr": 0.99,
+     "flagged": 564,
+     "exact": 559,
+     "precision": 0.9911,
+     "recall": 0.8066
+    }
+   ]
+  },
+  {
+   "epoch": "final_full_library",
+   "lib_single": 0.9729628520071899,
+   "lib_tta": 0.9729628520071899
+  }
+ ]
+}

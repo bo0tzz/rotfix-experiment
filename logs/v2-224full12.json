@@ -1,0 +1,183 @@
+{
+ "arch": "p4_scratch",
+ "params": 189712,
+ "res": 224,
+ "hist": [
+  {
+   "epoch": 0,
+   "loss": 0.5884632798507041,
+   "oid_single": 0.8564,
+   "oid_tta": 0.8564,
+   "lib_single": 0.9105714285714286,
+   "lib_tta": 0.9105714285714286,
+   "sec": 1655
+  },
+  {
+   "epoch": 1,
+   "loss": 0.3220462796045816,
+   "oid_single": 0.9046,
+   "oid_tta": 0.9046,
+   "lib_single": 0.9465714285714286,
+   "lib_tta": 0.9465714285714286,
+   "sec": 1647
+  },
+  {
+   "epoch": 2,
+   "loss": 0.2526117814705596,
+   "oid_single": 0.9152,
+   "oid_tta": 0.9152,
+   "lib_single": 0.9548571428571428,
+   "lib_tta": 0.9548571428571428,
+   "sec": 1650
+  },
+  {
+   "epoch": 3,
+   "loss": 0.21868529919715787,
+   "oid_single": 0.9224,
+   "oid_tta": 0.9224,
+   "lib_single": 0.9577142857142857,
+   "lib_tta": 0.9577142857142857,
+   "sec": 1651
+  },
+  {
+   "epoch": 4,
+   "loss": 0.19774862924121805,
+   "oid_single": 0.9294,
+   "oid_tta": 0.9294,
+   "lib_single": 0.962,
+   "lib_tta": 0.962,
+   "sec": 1649
+  },
+  {
+   "epoch": 5,
+   "loss": 0.18344909272968496,
+   "oid_single": 0.9286,
+   "oid_tta": 0.9286,
+   "lib_single": 0.9671428571428572,
+   "lib_tta": 0.9671428571428572,
+   "sec": 1647
+  },
+  {
+   "epoch": 6,
+   "loss": 0.1711006278277339,
+   "oid_single": 0.9372,
+   "oid_tta": 0.9372,
+   "lib_single": 0.9674285714285714,
+   "lib_tta": 0.9674285714285714,
+   "sec": 1647
+  },
+  {
+   "epoch": 7,
+   "loss": 0.16023968984663003,
+   "oid_single": 0.9412,
+   "oid_tta": 0.9412,
+   "lib_single": 0.9694285714285714,
+   "lib_tta": 0.9694285714285714,
+   "sec": 1647
+  },
+  {
+   "epoch": 8,
+   "loss": 0.15027856728750863,
+   "oid_single": 0.9434,
+   "oid_tta": 0.9434,
+   "lib_single": 0.9714285714285714,
+   "lib_tta": 0.9714285714285714,
+   "sec": 1649
+  },
+  {
+   "epoch": 9,
+   "loss": 0.1414943975565092,
+   "oid_single": 0.9438,
+   "oid_tta": 0.9438,
+   "lib_single": 0.9717142857142858,
+   "lib_tta": 0.9717142857142858,
+   "sec": 1645
+  },
+  {
+   "epoch": 10,
+   "loss": 0.13505387254210638,
+   "oid_single": 0.9462,
+   "oid_tta": 0.9462,
+   "lib_single": 0.9731428571428572,
+   "lib_tta": 0.9731428571428572,
+   "sec": 1646
+  },
+  {
+   "epoch": 11,
+   "loss": 0.1316770087658088,
+   "oid_single": 0.9468,
+   "oid_tta": 0.9468,
+   "lib_single": 0.9737142857142858,
+   "lib_tta": 0.9737142857142858,
+   "sec": 1648
+  },
+  {
+   "epoch": "product_metrics",
+   "n_images": 13352,
+   "n_rotated": 693,
+   "curve": [
+    {
+     "thr": 0.0,
+     "flagged": 1053,
+     "exact": 672,
+     "precision": 0.6382,
+     "recall": 0.9697
+    },
+    {
+     "thr": 0.5,
+     "flagged": 976,
+     "exact": 668,
+     "precision": 0.6844,
+     "recall": 0.9639
+    },
+    {
+     "thr": 0.6,
+     "flagged": 900,
+     "exact": 660,
+     "precision": 0.7333,
+     "recall": 0.9524
+    },
+    {
+     "thr": 0.7,
+     "flagged": 820,
+     "exact": 652,
+     "precision": 0.7951,
+     "recall": 0.9408
+    },
+    {
+     "thr": 0.8,
+     "flagged": 754,
+     "exact": 642,
+     "precision": 0.8515,
+     "recall": 0.9264
+    },
+    {
+     "thr": 0.9,
+     "flagged": 677,
+     "exact": 618,
+     "precision": 0.9129,
+     "recall": 0.8918
+    },
+    {
+     "thr": 0.95,
+     "flagged": 632,
+     "exact": 596,
+     "precision": 0.943,
+     "recall": 0.86
+    },
+    {
+     "thr": 0.99,
+     "flagged": 538,
+     "exact": 529,
+     "precision": 0.9833,
+     "recall": 0.7633
+    }
+   ]
+  },
+  {
+   "epoch": "final_full_library",
+   "lib_single": 0.9707159976033553,
+   "lib_tta": 0.9707159976033553
+  }
+ ]
+}

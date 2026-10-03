@@ -2549,3 +2549,200 @@ probe, which is expected — the probe picks the optimal direction in embedding 
 picks one fixed direction chosen by a text encoder that has no reliable notion of "upright".
 
 The earlier conclusion was right. The reasoning behind it was only ever half-measured, and now is.
+
+---
+
+# Rounds two and three, and a public-data-only replication (2026-09-30 → 10-03)
+
+Everything below post-dates the first hand-off. Three things happened: the objective and
+architecture ideas from round two were tested and mostly did not survive; the whole pipeline was
+re-run using only public data to see how much the private library mattered; and the run-to-run
+noise floor turned out to be **2.5x larger than we had been quoting**, which retroactively
+dissolved most of round two's results.
+
+## 1. The noise floor was wrong, and it matters more than any single arm
+
+Until 10-02 we quoted a "noise floor" of **0.0015 AP**. That was **one observed `|delta|` from one
+pair** of identical-config runs. The notes flagged at the time that a single pair cannot pin down a
+standard deviation. It could not, and it was low by a factor of 2.5.
+
+Three runs of one configuration (p4_big, 1.09M, 12 epochs, bs64) differing only in seed:
+
+| run | AP | R@P>=.93 | one-press | missed |
+|---|---|---|---|---|
+| `v2-ctrl12` | .9611 | .902 | 614 | 16 |
+| `v2-ctrl12b` | .9667 | .926 | 629 | 15 |
+| `v2-ctrl12c` | .9578 | .908 | 618 | 19 |
+
+mean **.9619**, sample SD **0.0045** (2 df), **range 0.0089**. Pooled with the earlier pair
+(SD 0.0010, 1 df): **sigma = 0.0037, 3 df**.
+
+**One-press varies by 15 images across identical configurations.** That is larger than every effect
+rounds two and three set out to measure.
+
+### Every lever, in units of the corrected sigma
+
+| lever | dAP | sigma | verdict |
+|---|---|---|---|
+| capacity 190k -> 757k | +0.0207 | 5.6 | **solid** |
+| MobileNetV4 vs p4_big | -0.0201 | 5.4 | **solid** |
+| epochs 8 -> 12 | +0.0164 | 4.4 | **solid** |
+| data 600k -> 1.09M | +0.0149 | 4.0 | **solid** |
+| resolution 224 -> 384 | +0.0129 | 3.5 | **solid** |
+| uniform-KL -> symmetry-matched targets | +0.0084 | 2.3 | marginal |
+| symmetry-matched targets (190k model) | +0.0082 | 2.2 | marginal |
+| data 1.09M -> 1.50M | +0.0060 | 1.6 | not established |
+| symmetry-matched targets (757k model) | +0.0060 | 1.6 | not established |
+| rep-branches (RepVGG style) | -0.0005 | 0.1 | no effect |
+
+**All five round-one levers survive. Nothing from rounds two or three clears 3 sigma.**
+
+## 2. Controls were the highest-value compute spent
+
+Three control runs, each about one GPU-day, each overturning conclusions that cost the same:
+
+- **`ctrl12`** — identical config to `v2-big12` but through the newer training script — scored
+  .9611 against .9699. Every arm had been compared against the wrong baseline. Re-based: the
+  rep-branch arm went from "-0.0094, a regression" to **-0.0005, free** (as its
+  inference-identity argument predicted); symmetry-matched targets went from "a wash" to the best
+  arm result; the uniform-KL penalty shrank 4.5x.
+- **`ctrl12b`** removed both remaining headline gains by showing `ctrl12` had simply been a low draw.
+- **`ctrl12c`** showed the 0.0089 "script gap" that `ctrl12` appeared to reveal sits *inside* the
+  spread of identical runs, so it was probably seed noise too.
+
+The methodological rule still holds — compare an arm to its matched control, never across training
+scripts — but the specific claim that one script costs ~0.009 AP is not supported.
+
+## 3. Symmetry-matched targets: the one idea worth keeping, narrowly
+
+Hard cross-entropy against a randomly applied rotation teaches a network to be confident about an
+arbitrary answer whenever the image has no canonical orientation. Under C4 equivariance the only
+self-consistent target for a genuinely symmetric image is **uniform** — rotating the input
+cyclically shifts the logits, so no single class can be right at all four rotations.
+
+Uniform-for-everything (`v2-soft12`, `v2-soft2w12`) **lost** AP. Inspecting the ambiguous set showed
+why: mean dominant opposite-pair mass was 0.660 and 65.6% of them carried >=60% of their mass on one
+opposite pair. Forcing those to uniform is wrong for two thirds of the set.
+
+Matching each image's target to its actual symmetry group — one-hot for normal images, `.5/.5` on
+the plausible opposite pair, uniform only for true four-way symmetry — recovers it: **+0.0084 over
+uniform-KL (2.3 sigma)**. Verified shift-consistent for all k and both pair offsets before training.
+
+The surviving claim is narrow and worth stating precisely: **if you use soft targets, match the
+symmetry group.** Not "soft targets help".
+
+## 4. Ambiguity sets must be regenerated when the data grows
+
+Scaling 1.09M -> 1.5M added 401,183 images. The ambiguity set, derived by 2-fold confident learning
+on the original manifest, covered **zero** of them — so ~10,000 genuinely ambiguous new images were
+trained with hard targets, the exact failure the objective exists to prevent.
+
+Regenerating it needed only a single inference pass, not another round of cross-validation: the new
+images are genuinely out-of-sample for any model trained on the old manifest. The protocol
+reproduced closely (2.52% ambiguous vs 2.53%; pair fraction 66.0% vs 65.6%; offset-0 share 70.7% vs
+71.4%).
+
+**It made no measurable difference** (-0.0020, -0.6 sigma). Worth recording as a negative: the
+hypothesis was well-motivated and wrong.
+
+## 5. Public-data-only replication
+
+Training was always public (Open Images, CC-BY). The private library was the **evaluation set**, so
+it drove model selection, thresholds and the ship decision. To test how much that mattered, all 20
+checkpoints were re-scored on **36,302 held-out OID validation images** — disjoint from the training
+manifest by construction — two ways: *natural* (as stored, labels from Google's `Rotation` column)
+and *synthetic* (canonicalise, then apply a known rotation).
+
+**What reproduces:**
+- coarse model ordering: **Spearman .965, Kendall .869** over 18 runs
+- a *calibrated* prediction of private accuracy: probit **slope 1.139, R^2 .9731**, all 18 runs
+- the **direction** of every within-family training lever
+
+**What does not:**
+- **the architecture choice inverts.** MobileNetV4 ranks #1-2 on public data and #6/#8 on the
+  private library. On public data the two families are *identical* on the rotated class (.7500 each)
+  and mnv4 wins only by flagging fewer ambiguous images; on the private library they tie on upright
+  and the equivariant model wins on the rotated class.
+- **effect magnitudes**, which span 0.20x to 2.80x of their private values with no consistent factor
+- any decision resting on effect size
+
+**Why:** OID's `Rotation` column behaves like *camera orientation*, not semantic uprightness. Of 48
+cases where Google says rotated and the model says upright, ~38 are top-down, macro or texture shots
+where the camera axis is parallel to gravity. Twelve independently-trained models are unanimous on
+**93.0%** of the private library but only **77.2%** of OID validation — and *least* unanimous
+(58.6%) on exactly the images Google labels rotated.
+
+Crucially, a human labeller has a third option — "this image has no correct orientation" — that the
+`Rotation` column cannot express, so every ambiguous image is forced into a binary it does not fit.
+
+**Recommendation for anyone reproducing this without labelled private data:** use the **synthetic**
+protocol for model selection. Counter-intuitively the protocol that *looks* least like deployment is
+the trustworthy one, because its labels are constructed rather than annotated and are therefore
+correct even where "upright" is undefined. Natural as-stored AP against OID's column is the weakest
+of the four protocols tested (Spearman .664) and inverts the architecture comparison.
+
+## 6. A second real library
+
+11,451 previews from an unrelated library, no ground truth, reviewed at full resolution with the
+model's own correction applied — which converts "which way is this rotated" (a chirality judgement
+that frontier MLLMs reliably fail, per RotBench) into "is this upright" (reliable).
+
+| queue band | true positive | false positive | no correct answer |
+|---|---|---|---|
+| ranks 1-48 | 5 | 0 | 1 |
+| ranks 111-158 | 2 | 2 | 2 |
+| ranks 301-348 | 1 | 4 | 3 |
+
+Estimated genuine rotations: **median 210, 90% interval [119, 450]** = 1.83% of the library, against
+the first library's exhaustively-known **5.19%**.
+
+**This explains the product claim's limits without invoking any model deficiency.** Precision at
+rank N is bounded by how many true positives exist above N. The first library had 693 rotations to
+find, so a 500-long queue could be filled with them; the second has ~210, so its queue exhausts
+around rank 200-300 and thereafter returns false positives and undecidable images.
+
+So **"the first 500 suggestions are all correct" was as much a property of that library's rotation
+count as of the model.** The honest product statement: the number of confidently-correct suggestions
+scales with how much is actually broken, and a well-curated library reaches the false-positive tail
+quickly.
+
+## 7. Where this leaves the recommendation
+
+**Unchanged.** `v2-224full12` — p4_scratch, 190k parameters, 2.91 MB ONNX, 9 ms/image CPU.
+
+Round three existed to check whether the ship model was losing out by never having received round
+two's improvements. It was not. Every 190k variant, with and without the new objective, with 1.09M
+or 1.5M images:
+
+| run | r40 | r50 | r60 | r70 | r80 | first-500 |
+|---|---|---|---|---|---|---|
+| hard targets, 1.5M | 278 | 347 | 416 | 487 | 568 | 497 |
+| symmetry-matched, 1.5M | 278 | 347 | 416 | 486 | 560 | 499 |
+| **`v2-224full12` (ship)** | 278 | 347 | 417 | 490 | 567 | 496 |
+
+An AP spread of 0.0101 across these produces **zero** difference at 40-60% recall and at most
+**8 reviews out of ~565** at 80%.
+
+## 8. What we did not do
+
+Two items from the original review feedback were queued and never run, and we are not claiming
+otherwise:
+
+- **Hard-negative mining.** The false-positive triage split errors 51% genuine model error / 49%
+  intrinsically ambiguous. Only the ambiguous half was addressed. The genuine-error half was never
+  mined.
+- **Retraining on cleanlab-corrected labels.** Detection was done thoroughly — 2-fold out-of-sample
+  CV over all 1,094,589 training posteriors, 7,953 label-error candidates (0.73%), band-weighted to
+  **~4,300 true errors (0.39%)**, with zero overlap against the ambiguity set. But no corrected
+  manifest was ever built; every arm trained on uncorrected labels. We measured the label noise and
+  never fixed it.
+
+Neither is expected to move review counts: 0.39% label noise is a small perturbation on a training
+set where a 37% *increase* in data bought 1.6 sigma. But they are untested, not dismissed.
+
+## 9. The thing worth taking away
+
+**AP was never the deliverable.** Every effect that looked meaningful in AP across two rounds —
++0.0060, +0.0084, +0.0101 — is worth under ten clicks out of ~565, and the seed-to-seed spread of a
+fixed configuration is 15. The metric that matters is *how many reviews until the user has seen most
+of what is actually broken*, and by that metric nothing after round one moved.

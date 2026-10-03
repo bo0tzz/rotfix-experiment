@@ -3,9 +3,16 @@
 C4-equivariant CNN that detects wrongly-rotated photos and predicts the correction. Built to decide
 whether this is worth building in.
 
-`v2-big12`: 757k params, ~3MB, 28ms/img on a Xeon Gold and 208ms on a Celeron N5105 under
-immich-ml's CPU defaults (ORT, batch 1, `intra_op=2`) — ~half a CLIP pass, +4–7% on Immich's
-existing per-image ML.
+**Recommendation: `v2-224full12`** — 190k params, **2.91MB ONNX**, **9ms/img** on a Xeon Gold and
+60ms on a Celeron N5105 under immich-ml's CPU defaults (ORT, batch 1, `intra_op=2`). It is within
+**8 reviews out of ~565** of the best model we trained, at 4x smaller and 3x faster. A 100k-image
+scan is ~15 min on a Xeon, ~1.6h on a Celeron.
+
+`v2-big12` (757k, 11.6MB, 28ms) is the AP leader and appears throughout as the reference point, but
+the gap does not survive contact with the review-count metric — see *Rounds two and three* below.
+
+Three rounds of training arms were run. **Only round one produced effects that clear the noise
+floor.** If you read one thing, read §1 and §9 of the rounds-two-and-three section in NOTES.md.
 
 ## Results
 
@@ -40,7 +47,14 @@ across the four group slices, so there's no per-class parameter and it can't lea
 
 `p4_scratch` is the same net at half width (189,712 params).
 
-## Levers, vs a 0.0015 AP noise floor (identical-config seed repeat)
+## Levers
+
+**The noise floor quoted below as 0.0015 was wrong.** It was a single observed `|delta|` from one
+seed-pair. Three identical-config runs later gave a sample SD of 0.0045 and a range of 0.0089;
+pooled, **sigma = 0.0037 (3 df)** — 2.5x larger. The round-one levers in this table are all 3.5-5.6
+sigma and survive; everything from rounds two and three does not. Full re-derivation in NOTES.md.
+
+Gains below are round-one comparisons (differing data/epoch pairings), kept as originally measured:
 
 | lever | gain |
 |---|---|
@@ -82,15 +96,23 @@ in Immich's preview artefacts. Test set is separate: library previews pulled ver
 ## Layout
 
 ```
-src/models.py       P4Net ships; PlainNet / P4MobileNet are comparison arms
-src/train.py        arms + hyperparams via env (ARCH, RES, EPOCHS, BS, ...)
-src/derive.py       builds the training set
-src/bake.py         required before ONNX export, see below
-src/dump_probs.py   per-image posteriors → .npz
-src/score.py        PR curves + AP from those .npz     `python score.py v2-big12 ...`
-logs/               per-epoch histories, raw + rendered
-results/            posteriors (p, y, ids) for every run
-NOTES.md            ~3,000-line lab notebook, everything timestamped
+src/models.py             P4Net ships; PlainNet / P4MobileNet are comparison arms
+src/train.py              round-one arms + hyperparams via env (ARCH, RES, EPOCHS, BS, ...)
+src/train_arm.py          round-two/three arms; swappable manifest, label smoothing
+src/train_sym.py          symmetry-matched / uniform-KL soft targets
+src/repblock.py           RepVGG-style re-parameterised group conv (folds at export)
+src/cl_train.py           confident learning: label errors vs orientation-ambiguity
+src/ambiguity_extend.py   extend the ambiguity set when the training data grows
+src/derive.py             builds the training set
+src/bake.py               required before ONNX export, see below
+src/dump_probs.py         per-image posteriors → .npz
+src/score.py              PR curves + AP from those .npz   `python score.py v2-big12 ...`
+src/eval_public.py        score any checkpoint on held-out OID validation (natural + synthetic)
+src/public_compare.py     public-vs-private ranking agreement
+src/clip_baseline*.py     the CLIP-reuse experiment
+logs/                     per-epoch histories, raw + rendered
+results/                  posteriors (p, y, ids) for every run
+NOTES.md                  lab notebook, everything timestamped
 ```
 
 ## Gotchas
@@ -100,4 +122,10 @@ NOTES.md            ~3,000-line lab notebook, everything timestamped
 - Per-epoch `lib_*` in the logs is a 3,500-image subset. It misled us three times; judge on
   `score.py` only.
 - 180° is the weak class in every model and config tested.
-- Ground truth is one family's library; the 5.2% base rate will vary.
+- Ground truth is one family's library; the 5.2% base rate will vary. A second real library
+  measured **~1.8%**, and the number of confidently-correct suggestions scales with it — see §6.
+- Compare an arm against a control trained by **the same script**. Mixing `train.py` and
+  `train_arm.py` results reversed three conclusions before this was caught.
+- An `ARCH`-style env var that silently falls back is worse than one that raises: two arms trained
+  the wrong architecture while logging the right name. Verify from the logged parameter count.
+- Regenerate the ambiguity set when the training data grows; it does not extend itself.
